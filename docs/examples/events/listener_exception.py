@@ -1,5 +1,9 @@
+from dataclasses import dataclass
+
 from litestar import post
 from litestar.events import listener
+from utils.client import client
+from utils.email import send_farewell_email
 
 
 @listener("user_deleted")
@@ -20,6 +24,6 @@ class DeleteUserDTO:
 
 
 @post("/users")
-async def delete_user_handler(data: UserDTO, request: Request) -> None:
+async def delete_user_handler(data: DeleteUserDTO, request: Request) -> None:
     await user_repository.delete({"email": data.email})
     request.app.emit("user_deleted", email=data.email, reason="deleted")

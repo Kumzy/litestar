@@ -1,4 +1,6 @@
 from litestar.events import listener
+from utils.client import client
+from utils.email import send_farewell_email
 
 
 @listener("user_deleted")

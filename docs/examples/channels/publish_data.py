@@ -1,1 +1,3 @@
-channels.publish({"message": "Hello"}, "general")
+from litestar.channels import ChannelsPlugin as Channels
+
+Channels.publish({"message": "Hello"}, "general")

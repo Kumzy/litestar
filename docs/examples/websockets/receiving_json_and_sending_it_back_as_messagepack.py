@@ -1,5 +1,8 @@
 from litestar import WebSocket, websocket
+from litestar.types.asgi_types import WebSocketMode
 
+
+mode = WebSocketMode("text")
 
 @websocket("/")
 async def handler(socket: WebSocket) -> None:

@@ -1,4 +1,5 @@
 from litestar.events import listener
+from utils.email import send_email
 
 
 @listener("user_created", "password_changed")
