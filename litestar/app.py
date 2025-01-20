@@ -20,6 +20,7 @@ from litestar._asgi import ASGIRouter
 from litestar._asgi.utils import get_route_handlers, wrap_in_exception_handler
 from litestar._openapi.plugin import OpenAPIPlugin
 from litestar._openapi.schema_generation import openapi_schema_plugins
+from litestar.cli._utils import AppRowInfo
 from litestar.config.allowed_hosts import AllowedHostsConfig
 from litestar.config.app import AppConfig, ExperimentalFeatures
 from litestar.config.response_cache import ResponseCacheConfig
@@ -175,6 +176,7 @@ class Litestar(Router):
         after_request: AfterRequestHookHandler | None = None,
         after_response: AfterResponseHookHandler | None = None,
         allowed_hosts: Sequence[str] | AllowedHostsConfig | None = None,
+        app_info_table: Sequence[AppRowInfo] | None = None,
         before_request: BeforeRequestHookHandler | None = None,
         before_send: Sequence[BeforeMessageSendHookHandler] | None = None,
         cache_control: CacheControlHeader | None = None,
@@ -336,6 +338,7 @@ class Litestar(Router):
             after_request=after_request,
             after_response=after_response,
             allowed_hosts=allowed_hosts if isinstance(allowed_hosts, AllowedHostsConfig) else list(allowed_hosts or []),
+            app_info_table=list(AppRowInfo or []),
             before_request=before_request,
             before_send=list(before_send or []),
             cache_control=cache_control,

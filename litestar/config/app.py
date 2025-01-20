@@ -84,6 +84,8 @@ class AppConfig:
     """
     allowed_hosts: list[str] | AllowedHostsConfig | None = field(default=None)
     """If set enables the builtin allowed hosts middleware."""
+    app_info_table: list[AppInfoRow] = field(default_factory=list)
+    """A list of :class:`EventListener <.events.listener.EventListener>`."""
     before_request: BeforeRequestHookHandler | None = field(default=None)
     """A sync or async function called immediately before calling the route handler. Receives the
     :class:`Request <.connection.Request>` instance and any non-``None`` return value is used for the response,

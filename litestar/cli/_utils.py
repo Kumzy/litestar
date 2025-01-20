@@ -74,6 +74,24 @@ class LitestarCLIException(ClickException):
         """Initialize exception and style error message."""
         super().__init__(message)
 
+@dataclass
+class AppRowInfo:
+    """Represents a row in the app info table."""
+
+    title: str
+    value: Any
+    format_value: bool = True
+
+    def get_formatted_value(self) -> str:
+        """Format the value for display."""
+        if not self.format_value:
+            return str(self.value)
+        return _format_is_enabled(self.value)
+
+    def _openapi_row_info(app: Litestar) -> None:
+        pass
+    
+DEFAULT_APP_INFO_TABLE_CONFIG = list(title="Litestar API", version="1.0.0")
 
 @dataclass
 class LitestarEnv:
@@ -362,6 +380,14 @@ def show_app_info(app: Litestar) -> None:  # pragma: no cover
     table = Table(show_header=False)
     table.add_column("title", style="cyan")
     table.add_column("value", style="bright_blue")
+
+    # Custom rows from app config
+    custom_rows = getattr(app, "info_table_rows", [])
+    
+    # Add all rows to table
+    for row in chain(DEFAULT_APP_INFO_TABLE_CONFIG, custom_rows):
+        if isinstance(row, AppRowInfo):
+            table.add_row(row.title, row.get_formatted_value())
 
     table.add_row("Litestar version", f"{__version__.major}.{__version__.minor}.{__version__.patch}")
     table.add_row("Debug mode", _format_is_enabled(app.debug))
