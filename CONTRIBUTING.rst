@@ -71,6 +71,8 @@ Workflow
 #. Clone your fork locally with git
 #. `Set up the environment <#setting-up-the-environment>`_
 #. Make your changes
+#. If your change is user-facing (``feat`` / ``fix`` / ``perf`` / ``refactor``), add a changelog fragment
+   (see `Changelog fragments`_)
 #. (Optional) Run ``pre-commit run --all-files`` to run linters and formatters. This step is optional and will be executed
    automatically by git before you make a commit, but you may want to run it manually in order to apply fixes
 #. Commit your changes to git. We follow `conventional commits <https://www.conventionalcommits.org/>`_
@@ -80,6 +82,42 @@ Workflow
    indicating what it changes. The style of the PR title should also follow
    `conventional commits <https://www.conventionalcommits.org/>`_, and this is enforced using a GitHub action.
 #. Add yourself as a contributor using the `all-contributors bot <https://allcontributors.org/docs/en/bot/usage>`_
+
+Changelog fragments
++++++++++++++++++++
+
+Changelog entries are assembled from *news fragments* with
+`towncrier <https://towncrier.readthedocs.io>`_. Every PR that adds a feature or fixes a
+bug (conventional-commit ``feat`` / ``fix`` / ``perf`` / ``refactor``) should include a
+fragment under ``docs/release-notes/fragments/``.
+
+Create ``docs/release-notes/fragments/<PR_NUMBER>.change.rst`` with a single
+``.. change::`` directive:
+
+.. code-block:: rst
+
+    .. change:: Short, imperative summary of the change
+        :type: bugfix          # one of: feature | bugfix | misc
+        :pr: 1234
+        :issue: 567            # optional; space-separated for multiple
+
+        A longer description in reStructuredText. For breaking changes, add a
+        ``:breaking:`` line under ``:type:`` and explain how to migrate.
+
+If a single PR introduces several distinct entries, add ``<PR_NUMBER>-2.change.rst``,
+``<PR_NUMBER>-3.change.rst``, and so on.
+
+Optionally scaffold the file::
+
+    uvx --from 'towncrier>=24,<26' towncrier create --edit 1234.change.rst
+
+Preview the assembled changelog without writing anything::
+
+    uvx --from 'towncrier>=24,<26' towncrier build --draft --version 3.0.0
+
+Docs-only, chore, CI, or other non-user-facing PRs don't need a fragment — apply the
+``skip-changelog`` label to bypass the check. The check is currently *advisory* (warn-only)
+and will become required at the 3.0 final release.
 
 Guidelines for writing code
 ----------------------------

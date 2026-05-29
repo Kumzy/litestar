@@ -18,3 +18,20 @@ Examples: Fixes #4321 or Closes #1234
 Ensure you are using a supported keyword to properly link an issue:
 https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword
 -->
+
+## Changelog
+
+<!--
+For user-facing changes (feat/fix/perf/refactor), add a news fragment:
+  docs/release-notes/fragments/<PR_NUMBER>.change.rst
+
+  .. change:: Short summary
+      :type: bugfix    # feature | bugfix | misc
+      :pr: <PR_NUMBER>
+
+      Longer description.
+
+The CI "Changelog Fragment" check prints a ready-to-paste skeleton if it's missing.
+Not needed for docs/chore/ci/test-only PRs — apply the `skip-changelog` label instead.
+See CONTRIBUTING → "Changelog fragments".
+-->
