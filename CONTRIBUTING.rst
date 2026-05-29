@@ -321,62 +321,60 @@ This is equivalent to:
 Creating a New Release
 ----------------------
 
-#. Checkout the ``main`` branch:
+#. Check out and update ``main``:
 
    .. code-block:: shell
-        :caption: Checking out the main branch of the ``litestar`` repository
 
-        git checkout main
+       git checkout main && git pull
 
-#. Run the release preparation script:
+#. Bump the version with ``uv`` (updates both ``pyproject.toml`` and ``uv.lock``):
 
    .. code-block:: shell
-        :caption: Preparing  a new release
 
-        python tools/prepare_release.py <new version number> --update-version --create-draft-release
+       uv version --bump patch   # or: minor | major | stable | beta | rc
 
-   Replace ``<new version number>`` with the desired version number following the
+   Use ``uv version --dry-run --bump <part>`` to preview, and ``uv version --short`` to
+   read the result. Versions follow the
    `versioning scheme <https://litestar.dev/about/litestar-releases#version-numbering>`_.
 
-   This script will:
-
-   - Update the version in ``pyproject.toml``
-   - Generate a changelog entry in :doc:`/release-notes/changelog`
-   - Create a draft release on GitHub
-
-#. Review the generated changelog entry in :doc:`/release-notes/changelog` to ensure it looks correct.
-
-#. Commit the changes to ``main``:
+#. Assemble the changelog from the news fragments with ``towncrier``:
 
    .. code-block:: shell
-        :caption: Committing the changes to the main branch
 
-        git commit -am "chore(release): prepare release vX.Y.Z"
+       uvx --from 'towncrier>=24,<26' towncrier build --version "$(uv version --short)"
 
-   Replace ``vX.Y.Z`` with the actual version number.
+   This consumes the fragments in ``docs/release-notes/fragments/`` into a new
+   ``.. changelog::`` entry. Review it in :doc:`/release-notes/changelog`.
 
-#. Create a new branch for the release:
-
-   .. code-block:: shell
-        :caption: Creating a new branch for the release
-
-        git checkout -b vX.Y.Z
-
-#. Push the changes to a ``vX.Y.Z`` branch:
+#. Generate the GitHub release notes and a draft release:
 
    .. code-block:: shell
-        :caption: Pushing the changes to the ``vX.Y.Z`` branch
 
-        git push origin vX.Y.Z
+       python tools/prepare_release.py "$(uv version --short)" --create-draft-release
 
-#. Open a pull request from the ``vX.Y.Z`` branch to ``main``.
-#. Once the pull request is approved, go to the draft release on GitHub
-   (the release preparation script will provide a link).
-#. Review the release notes in the draft release to ensure they look correct.
-#. If everything looks good, click "Publish release" to make the release official.
-#. Go to the `Release Action <https://github.com/litestar-org/litestar/actions/workflows/publish.yml>`_ and approve
-   the release workflow if necessary.
-#. Check that the release workflow runs successfully.
+   This creates a draft GitHub release (sponsors, categorized PRs, first-time
+   contributors, full-changelog link). It no longer edits the changelog or the version
+   — those are handled by the two previous steps.
 
-.. note:: The version number should follow `semantic versioning <https://semver.org/>`_ and
+#. Commit the version bump and assembled changelog:
+
+   .. code-block:: shell
+
+       git commit -am "chore(release): prepare release v$(uv version --short)"
+
+#. Push to a ``vX.Y.Z`` branch and open a pull request to ``main``:
+
+   .. code-block:: shell
+
+       git switch -c "v$(uv version --short)" && git push origin HEAD
+
+#. Once approved and merged, open the draft release on GitHub (the script prints its
+   link), review the notes, and click "Publish release".
+#. Approve the `release workflow <https://github.com/litestar-org/litestar/actions/workflows/publish.yml>`_
+   if necessary, and check that it runs successfully.
+
+.. note:: Versions follow `semantic versioning <https://semver.org/>`_ and
    `PEP 440 <https://peps.python.org/pep-0440/>`_.
+
+.. note:: This manual flow will be automated by a one-click ``release.yml`` workflow
+   (with a dry-run preview). Until then, follow the steps above.
