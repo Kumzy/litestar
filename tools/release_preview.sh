@@ -51,6 +51,15 @@ else
 fi
 
 printf '\nChangelog preview (towncrier --draft, not written):\n'
+if printf '%s' "${NEW_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(\.post[0-9]+)?$'; then
+	ESC="${NEW_VERSION//./\\.}"
+	PRE_COUNT="$(grep -cE "^\.\. changelog:: ${ESC}((a|b|rc)[0-9]+|\.dev[0-9]+)\$" docs/release-notes/changelog.rst 2>/dev/null)" || PRE_COUNT=0
+	if [ "${PRE_COUNT}" -gt 0 ]; then
+		printf '(final release: %s existing pre-release section(s) will be folded into %s at release time)\n' "${PRE_COUNT}" "${NEW_VERSION}"
+	fi
+else
+	printf '(pre-release: this section is kept and later folded into the final release)\n'
+fi
 printf -- '------------------------------------------------------------\n%s\n' "${CHANGELOG_PREVIEW}"
 printf -- '------------------------------------------------------------\n'
 
