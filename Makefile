@@ -148,3 +148,7 @@ docs-linkcheck: 									## Run the link check on the docs
 .PHONY: docs-linkcheck-full
 docs-linkcheck-full: 									## Run the full link check on the docs
 	@uv run --isolated sphinx-build -b linkcheck ./docs ./docs/_build -D linkcheck_anchors=0
+
+.PHONY: release-preview
+release-preview: 									## Preview a release (no writes). Usage: make release-preview BUMP=patch
+	@bash tools/release_preview.sh "$(or $(BUMP),patch)"

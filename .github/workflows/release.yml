@@ -1,0 +1,93 @@
+name: "Release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump"
+        type: choice
+        required: true
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+          - stable
+          - alpha
+          - beta
+          - rc
+      dry_run:
+        description: "Dry run — preview only, write nothing"
+        type: boolean
+        required: true
+        default: true
+      base:
+        description: "Previous release tag (optional; needed for the first 3.x release)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: ${{ inputs.dry_run && 'Preview release' || 'Cut release' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.8.8" # >= 0.7 for `uv version`
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # ---------------------------------------------------------------- dry run
+      - name: Preview release (writes nothing)
+        if: ${{ inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/release_preview.sh "${{ inputs.bump }}"
+
+      # ------------------------------------------------------------ real release
+      - name: Bump version
+        if: ${{ !inputs.dry_run }}
+        run: |
+          uv version --bump "${{ inputs.bump }}" --no-sync
+          echo "VERSION=$(uv version --short)" >> "$GITHUB_ENV"
+
+      - name: Assemble changelog from fragments
+        if: ${{ !inputs.dry_run }}
+        run: uvx --from 'towncrier>=24,<26' towncrier build --yes --version "$VERSION"
+
+      - name: Create draft GitHub release + notes
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run python tools/prepare_release.py "$VERSION" ${{ inputs.base && format('--base {0}', inputs.base) || '' }} --create-draft-release
+
+      - name: Open release PR
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="v$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -am "chore(release): prepare release v$VERSION"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "chore(release): v$VERSION" \
+            --body "Automated release PR for v$VERSION. Review, merge, then **Publish** the draft release (→ \`publish.yml\` → PyPI)."
