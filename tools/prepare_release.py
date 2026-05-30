@@ -284,6 +284,15 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
     doc.add_line("\n**Full Changelog**")
     doc.add_line(release_info.compare_url)
 
+    doc.add_line("\n## Installation")
+    doc.add_line(f"Install or upgrade to `{release_info.version}`:")
+    doc.add_line("```shell")
+    doc.add_line("# uv")
+    doc.add_line(f'uv add "litestar=={release_info.version}"')
+    doc.add_line("# pip")
+    doc.add_line(f'pip install --upgrade "litestar=={release_info.version}"')
+    doc.add_line("```")
+
     # sponsors at the end (mirrors astral-sh/uv release layout)
     doc.add_line("\n## Sponsors 🌟")
     doc.add_line(

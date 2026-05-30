@@ -53,5 +53,9 @@ def test_build_gh_release_notes_has_all_sections() -> None:
     assert "internal noise" not in notes  # chore -> dropped
     assert "## New contributors" in notes and "@alice made their first contribution" in notes
     assert "compare/v2.9.0...v3.0.0" in notes
-    # sponsors comes after the changes (uv-style layout)
-    assert notes.index("## Sponsors") > notes.index("## What's changed")
+    # installation section with uv + pip, pinned to the version
+    assert "## Installation" in notes
+    assert 'uv add "litestar==3.0.0"' in notes
+    assert 'pip install --upgrade "litestar==3.0.0"' in notes
+    # sponsors comes after the changes and the installation block (uv-style layout)
+    assert notes.index("## Sponsors") > notes.index("## Installation") > notes.index("## What's changed")
