@@ -17,9 +17,12 @@ _polar = "[Polar.sh](https://polar.sh/litestar-org)"
 _open_collective = "[OpenCollective](https://opencollective.com/litestar)"
 _github_sponsors = "[GitHub Sponsors](https://github.com/sponsors/litestar-org/)"
 
-# repository slug; overridable so the tool also works on forks (Actions sets GITHUB_REPOSITORY)
-_REPO = os.getenv("GITHUB_REPOSITORY", "litestar-org/litestar")
-_OWNER, _, _NAME = _REPO.partition("/")
+# Read PR/tag/contributor data and build the note links from the canonical project
+# (override with RELEASE_SOURCE_REPO); create the release on the repo running the workflow
+# (a fork sets GITHUB_REPOSITORY) — so the data stays real while the actions land on the fork.
+_SOURCE_REPO = os.getenv("RELEASE_SOURCE_REPO", "litestar-org/litestar")
+_TARGET_REPO = os.getenv("GITHUB_REPOSITORY", _SOURCE_REPO)
+_OWNER, _, _NAME = _SOURCE_REPO.partition("/")
 
 
 class PullRequest(msgspec.Struct, kw_only=True):
@@ -70,7 +73,7 @@ class ReleaseInfo:
 
     @property
     def compare_url(self) -> str:
-        return f"https://github.com/{_REPO}/compare/{self.base}...{self.release_tag}"
+        return f"https://github.com/{_SOURCE_REPO}/compare/{self.base}...{self.release_tag}"
 
 
 def _pr_number_from_commit(comp: Comp) -> int:
@@ -101,7 +104,7 @@ class _Thing:
                 "X-GitHub-Api-Version": "2022-11-28",
                 "Accept": "application/vnd.github+json",
             },
-            base_url=f"https://api.github.com/repos/{_REPO}/",
+            base_url=f"https://api.github.com/repos/{_SOURCE_REPO}/",
         )
 
     async def get_closing_issues_references(self, pr_number: int) -> list[int]:
@@ -152,7 +155,7 @@ class _Thing:
             number=pr.number,
             cc_type=cc_type,
             clean_title=clean_title.strip(),
-            url=f"https://github.com/{_REPO}/pull/{pr.number}",
+            url=f"https://github.com/{_SOURCE_REPO}/pull/{pr.number}",
             closes=closes_issues,
             title=pr.title,
             created_at=datetime.datetime.strptime(pr.created_at, "%Y-%m-%dT%H:%M:%S%z"),
@@ -220,8 +223,9 @@ class _Thing:
     async def create_draft_release(self, body: str, release_branch: str) -> str:
         # mark alpha/beta/rc/dev versions as a GitHub pre-release (the API won't derive this)
         is_prerelease = bool(re.search(r"(a|b|rc)\d+|\.dev\d+", self._new_release_version))
+        # reads use the source base_url; the release is created on the target repo (the fork)
         res = await self._api_client.post(
-            "/releases",
+            f"https://api.github.com/repos/{_TARGET_REPO}/releases",
             json={
                 "tag_name": self._new_release_tag,
                 "target_commitish": release_branch,
@@ -335,18 +339,31 @@ def _get_gh_token() -> str:
     quit(1)
 
 
-def _get_latest_tag() -> str:
-    click.secho("Using latest tag", fg="blue")
-    # The highest version tag = the latest release (e.g. v2.23.0). NOT `--sort=taggerdate`,
-    # which wrongly orders litestar's many lightweight tags (no tagger date) and can return
-    # e.g. v2.9.1; and NOT `git describe`, which only sees tags reachable from HEAD (the 3.0
-    # branch diverged at v2.17.0, so it would miss the later 2.x maintenance releases).
-    out = subprocess.run(  # noqa: S602
-        "git tag --sort=-v:refname", check=False, capture_output=True, text=True, shell=True
-    ).stdout.strip()
-    if not out:
-        raise ValueError("no git tags found")
-    return out.splitlines()[0]
+def _get_latest_tag(gh_token: str | None = None) -> str:
+    click.secho("Using latest release tag", fg="blue")
+    # Detect the latest release from the SOURCE repo (the canonical project), so the compare
+    # base reflects official litestar even when this runs on a fork whose local tags may have
+    # drifted (e.g. test tags from dry runs). /releases/latest = newest non-prerelease, non-draft.
+    headers = {"Accept": "application/vnd.github+json"}
+    if gh_token:
+        headers["Authorization"] = f"Bearer {gh_token}"
+    try:
+        res = httpx.get(
+            f"https://api.github.com/repos/{_SOURCE_REPO}/releases/latest", headers=headers, timeout=15
+        )
+        res.raise_for_status()
+        return res.json()["tag_name"]  # type: ignore[no-any-return]
+    except Exception as exc:  # fall back to local tags if the API is unreachable
+        click.secho(f"  (API latest-release lookup failed, using local git tags: {exc})", fg="yellow")
+        # The highest version tag = the latest release. NOT `--sort=taggerdate`, which wrongly
+        # orders litestar's many lightweight tags (no tagger date); and NOT `git describe`, which
+        # only sees tags reachable from HEAD (the 3.0 branch diverged at v2.17.0).
+        out = subprocess.run(  # noqa: S602
+            "git tag --sort=-v:refname", check=False, capture_output=True, text=True, shell=True
+        ).stdout.strip()
+        if not out:
+            raise ValueError("no git tags found") from exc
+        return out.splitlines()[0]
 
 
 @click.command()
@@ -369,7 +386,7 @@ def cli(
     if gh_token is None:
         gh_token = _get_gh_token()
     if base is None:
-        base = _get_latest_tag()
+        base = _get_latest_tag(gh_token)
 
     if not re.match(r"\d+\.\d+\.\d+", version):
         click.secho(f"Invalid version: {version!r}")
