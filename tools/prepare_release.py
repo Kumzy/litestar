@@ -261,11 +261,11 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
 
     # conventional-commit type -> release-notes section, in display order
     sections = (
-        ("feat", "### New features 🚀"),
-        ("fix", "### Bugfixes 🐛"),
-        ("perf", "### Performance ⚡"),
-        ("refactor", "### Refactors 🔧"),
-        ("docs", "### Documentation 📚"),
+        ("feat", "### New features"),
+        ("fix", "### Bugfixes"),
+        ("perf", "### Performance"),
+        ("refactor", "### Refactors"),
+        ("docs", "### Documentation"),
     )
     titled_types = {cc_type for cc_type, _ in sections}
     ignored_types = {"ci", "chore"}  # internal noise, kept out of the notes
@@ -282,12 +282,11 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
         if cc_type not in titled_types and cc_type not in ignored_types
         for pr in prs
     ]:
-        doc.add_line("\n<!-- Review these: Not all of them should go into the release notes -->")
-        doc.add_line("### Other changes")
+        doc.add_line("\n### Other changes")
         doc.add_pr_descriptions(other)
 
     if release_info.first_time_prs:
-        doc.add_line("\n## New contributors 🎉")
+        doc.add_line("\n## New contributors")
         for pr in release_info.first_time_prs:
             doc.add_line(f"* @{pr.user.login} made their first contribution in {pr.url}")
 
@@ -306,8 +305,7 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
     # sponsors at the end. The handles are NOT auto-fetched (no single API across the three
     # platforms) — maintainers fill the empty slots from the Polar / GitHub Sponsors /
     # OpenCollective dashboards before publishing the draft.
-    doc.add_line("\n## Sponsors 🌟")
-    doc.add_line("<!-- Maintainers: add the current sponsor handles before publishing the draft -->")
+    doc.add_line("\n## Sponsors")
     doc.add_line("Thanks to these incredible business sponsors:")
     doc.add_line("- ")
     doc.add_line("")

@@ -74,6 +74,8 @@ if [ "${HAVE_TOKEN}" -eq 1 ]; then
 	printf -- '------------------------------------------------------------\n'
 fi
 
+printf '\n\033[1;33m⚠ Review the GitHub release notes before publishing — especially the "Other changes" section: not all of those entries belong in the final notes.\033[0m\n'
+
 printf '\n'
 if [ "${fail}" -eq 0 ]; then
 	echo "✅ READY to release ${NEW_VERSION} (re-run release.yml with dry_run=false to cut it)."

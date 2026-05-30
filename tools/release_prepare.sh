@@ -63,3 +63,5 @@ Next:
 
 (Or skip all of the above and just run the "Release" workflow with dry_run off.)
 EOF
+
+printf '\n\033[1;33m⚠ When you create the release, review the generated notes before publishing — especially the "Other changes" section: not all of those entries belong in the final notes.\033[0m\n'
