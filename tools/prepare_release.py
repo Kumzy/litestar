@@ -303,12 +303,18 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
     doc.add_line(f'pip install --upgrade "litestar=={release_info.version}"')
     doc.add_line("```")
 
-    # sponsors at the end (mirrors astral-sh/uv release layout)
+    # sponsors at the end. The handles are NOT auto-fetched (no single API across the three
+    # platforms) — maintainers fill the empty slots from the Polar / GitHub Sponsors /
+    # OpenCollective dashboards before publishing the draft.
     doc.add_line("\n## Sponsors 🌟")
-    doc.add_line(
-        "⚠️ Maintainers: Please adjust business/individual sponsors section here as defined by our tier rewards"
-    )
-    doc.add_line(f"- A huge 'Thank you!' to all sponsors across {_polar}, {_open_collective} and {_github_sponsors}!")
+    doc.add_line("<!-- Maintainers: add the current sponsor handles before publishing the draft -->")
+    doc.add_line("Thanks to these incredible business sponsors:")
+    doc.add_line("- ")
+    doc.add_line("")
+    doc.add_line("Thanks to these incredible personal sponsors:")
+    doc.add_line(f"- {_polar}: ")
+    doc.add_line(f"- {_github_sponsors}: ")
+    doc.add_line(f"- {_open_collective}: ")
 
     return doc.text
 
