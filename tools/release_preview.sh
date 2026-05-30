@@ -3,23 +3,24 @@
 # build, no tag, no push). Shared by `make release-preview` (local) and the dry-run
 # path of .github/workflows/release.yml (CI).
 #
-# Usage: tools/release_preview.sh [bump]
-#   bump: patch | minor | major | stable | alpha | beta | rc   (default: patch)
+# Usage: tools/release_preview.sh [bump|version]   (default: patch)
+#   bump:    patch | minor | major | stable | alpha | beta | rc  (combinable, e.g. "major beta")
+#   version: an explicit version, e.g. 4.0.0b1
 set -euo pipefail
 
-BUMP="${1:-patch}"
+ARG="${1:-patch}"
+# shellcheck source=tools/release_lib.sh
+source "$(dirname "$0")/release_lib.sh"
 fail=0
 
 check() { # check "<label>" <exit-status>
 	if [ "$2" -eq 0 ]; then printf '  \033[32m✅\033[0m %s\n' "$1"; else printf '  \033[31m❌\033[0m %s\n' "$1"; fail=1; fi
 }
 
-CUR_VERSION="$(uv version --short)"
-NEW_VERSION="$(uv version --dry-run --bump "$BUMP" --output-format json \
-	| python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+resolve_version "${ARG}" # sets CUR_VERSION, NEW_VERSION, UV_ARGS
 TAG="v${NEW_VERSION}"
 
-printf '\nRelease preview: %s --(%s)--> %s\n\n' "$CUR_VERSION" "$BUMP" "$NEW_VERSION"
+printf '\nRelease preview: %s --(%s)--> %s\n\n' "$CUR_VERSION" "$ARG" "$NEW_VERSION"
 echo "Readiness checks"
 
 git diff --quiet && git diff --cached --quiet
@@ -79,7 +80,7 @@ fi
 
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
 	{
-		printf '## Release preview: `%s` → `%s` (bump: `%s`)\n\n' "${CUR_VERSION}" "${NEW_VERSION}" "${BUMP}"
+		printf '## Release preview: `%s` → `%s` (`%s`)\n\n' "${CUR_VERSION}" "${NEW_VERSION}" "${ARG}"
 		if [ "${fail}" -eq 0 ]; then
 			printf '**✅ READY** — re-run with `dry_run: false` to cut the release.\n\n'
 		else

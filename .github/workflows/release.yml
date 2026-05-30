@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "Version bump"
+        description: "Version bump (ignored if 'version' is set)"
         type: choice
         required: true
         default: patch
@@ -16,6 +16,11 @@ on:
           - alpha
           - beta
           - rc
+      version:
+        description: "Explicit version (overrides bump; e.g. 4.0.0b1 for a major beta)"
+        type: string
+        required: false
+        default: ""
       dry_run:
         description: "Dry run — preview only, write nothing"
         type: boolean
@@ -57,13 +62,22 @@ jobs:
         if: ${{ inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash tools/release_preview.sh "${{ inputs.bump }}"
+          BUMP: ${{ inputs.bump }}
+          EXPLICIT_VERSION: ${{ inputs.version }}
+        run: bash tools/release_preview.sh "${EXPLICIT_VERSION:-$BUMP}"
 
       # ------------------------------------------------------------ real release
       - name: Bump version
         if: ${{ !inputs.dry_run }}
+        env:
+          BUMP: ${{ inputs.bump }}
+          EXPLICIT_VERSION: ${{ inputs.version }}
         run: |
-          uv version --bump "${{ inputs.bump }}" --no-sync
+          if [ -n "$EXPLICIT_VERSION" ]; then
+            uv version "$EXPLICIT_VERSION" --no-sync
+          else
+            uv version --bump "$BUMP" --no-sync
+          fi
           VERSION="$(uv version --short)"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           # final release => fold pre-release sections into one; pre-release => keep its own section

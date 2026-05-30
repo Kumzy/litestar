@@ -154,9 +154,9 @@ docs-linkcheck-full: 									## Run the full link check on the docs
 # =============================================================================
 
 .PHONY: release-preview
-release-preview: 									## Preview a release: readiness checks + previews, writes nothing. Usage: make release-preview BUMP=patch
-	@bash tools/release_preview.sh "$(or $(BUMP),patch)"
+release-preview: 									## Preview a release (no writes). Usage: make release-preview BUMP=minor | BUMP="major beta" | VERSION=4.0.0b1
+	@bash tools/release_preview.sh "$(or $(VERSION),$(BUMP),patch)"
 
 .PHONY: release-prepare
-release-prepare: 									## Prepare a release locally: branch + bump + changelog + commit (no push). Usage: make release-prepare BUMP=patch
-	@bash tools/release_prepare.sh "$(or $(BUMP),patch)"
+release-prepare: 									## Prepare a release locally (branch+bump+changelog+commit, no push). Usage: make release-prepare BUMP=minor | VERSION=4.0.0b1
+	@bash tools/release_prepare.sh "$(or $(VERSION),$(BUMP),patch)"

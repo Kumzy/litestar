@@ -4,11 +4,14 @@
 # Review the result, then push + open a PR (or run the "Release" workflow with
 # dry_run off). Pairs with tools/release_preview.sh (which writes nothing).
 #
-# Usage: tools/release_prepare.sh [bump]
-#   bump: patch | minor | major | stable | alpha | beta | rc   (default: patch)
+# Usage: tools/release_prepare.sh [bump|version]   (default: patch)
+#   bump:    patch | minor | major | stable | alpha | beta | rc  (combinable, e.g. "major beta")
+#   version: an explicit version, e.g. 4.0.0b1
 set -euo pipefail
 
-BUMP="${1:-patch}"
+ARG="${1:-patch}"
+# shellcheck source=tools/release_lib.sh
+source "$(dirname "$0")/release_lib.sh"
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
 	echo "✖ working tree is not clean — commit or stash first." >&2
@@ -22,8 +25,7 @@ if [ "${CURRENT_BRANCH}" != "main" ]; then
 	case "${reply}" in [yY]*) ;; *) echo "aborted." >&2; exit 1 ;; esac
 fi
 
-NEW_VERSION="$(uv version --dry-run --bump "${BUMP}" --output-format json \
-	| python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+resolve_version "${ARG}" # sets CUR_VERSION, NEW_VERSION, UV_ARGS
 TAG="v${NEW_VERSION}"
 
 if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null 2>&1; then
@@ -35,9 +37,9 @@ if git show-ref -q --verify "refs/heads/${TAG}"; then
 	exit 1
 fi
 
-echo "→ preparing ${TAG} (bump: ${BUMP}) on a new branch — nothing will be pushed"
+echo "→ preparing ${TAG} (${ARG}) on a new branch — nothing will be pushed"
 git switch -c "${TAG}"
-uv version --bump "${BUMP}" --no-sync
+uv version "${UV_ARGS[@]}" --no-sync
 uvx --from 'towncrier>=24,<26' towncrier build --yes --version "${NEW_VERSION}"
 
 # Pre-releases keep their own section; at a FINAL release, fold the pre-release
