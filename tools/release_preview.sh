@@ -3,12 +3,14 @@
 # build, no tag, no push). Shared by `make release-preview` (local) and the dry-run
 # path of .github/workflows/release.yml (CI).
 #
-# Usage: tools/release_preview.sh [bump|version]   (default: patch)
+# Usage: tools/release_preview.sh [bump|version] [base]   (default: patch)
 #   bump:    patch | minor | major | stable | alpha | beta | rc  (combinable, e.g. "major beta")
 #   version: an explicit version, e.g. 4.0.0b1
+#   base:    optional tag for the GH-notes compare base (default: latest tag, e.g. v2.23.0)
 set -euo pipefail
 
 ARG="${1:-patch}"
+BASE="${2:-}" # optional override for the GitHub-notes compare base
 # shellcheck source=tools/release_lib.sh
 source "$(dirname "$0")/release_lib.sh"
 fail=0
@@ -65,9 +67,10 @@ printf -- '------------------------------------------------------------\n%s\n' "
 printf -- '------------------------------------------------------------\n'
 
 if [ "${HAVE_TOKEN}" -eq 1 ]; then
-	printf '\nGitHub release notes preview:\n'
+	printf '\nGitHub release notes preview%s:\n' "${BASE:+ (base ${BASE})}"
 	printf -- '------------------------------------------------------------\n'
-	uv run python tools/prepare_release.py "${NEW_VERSION}" 2>/dev/null || echo "(could not generate GH notes preview)"
+	# shellcheck disable=SC2086  # BASE is a single tag (no spaces); the split into "--base <tag>" is intentional
+	uv run python tools/prepare_release.py "${NEW_VERSION}" ${BASE:+--base "${BASE}"} 2>/dev/null || echo "(could not generate GH notes preview)"
 	printf -- '------------------------------------------------------------\n'
 fi
 
