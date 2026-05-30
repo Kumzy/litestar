@@ -249,12 +249,6 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
     #    made there depending on how things were merged
     doc = GHReleaseWriter()
 
-    doc.add_line("## Sponsors 🌟")
-    doc.add_line(
-        "⚠️ Maintainers: Please adjust business/individual sponsors section here as defined by our tier rewards"
-    )
-    doc.add_line(f"- A huge 'Thank you!' to all sponsors across {_polar}, {_open_collective} and {_github_sponsors}!")
-
     doc.add_line("## What's changed")
     if features := release_info.pull_requests.get("feat"):
         doc.add_line("\n### New features 🚀")
@@ -262,10 +256,6 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
     if fixes := release_info.pull_requests.get("fix"):
         doc.add_line("\n### Bugfixes 🐛")
         doc.add_pr_descriptions(fixes)
-    if release_info.first_time_prs:
-        doc.add_line("\n## New contributors 🎉")
-        for pr in release_info.first_time_prs:
-            doc.add_line(f"* @{pr.user.login} made their first contribution in {pr.url}")
 
     ignore_sections = {"fix", "feat", "ci", "chore"}
 
@@ -274,8 +264,20 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
         doc.add_line("### Other changes")
         doc.add_pr_descriptions(other)
 
+    if release_info.first_time_prs:
+        doc.add_line("\n## New contributors 🎉")
+        for pr in release_info.first_time_prs:
+            doc.add_line(f"* @{pr.user.login} made their first contribution in {pr.url}")
+
     doc.add_line("\n**Full Changelog**")
     doc.add_line(release_info.compare_url)
+
+    # sponsors at the end (mirrors astral-sh/uv release layout)
+    doc.add_line("\n## Sponsors 🌟")
+    doc.add_line(
+        "⚠️ Maintainers: Please adjust business/individual sponsors section here as defined by our tier rewards"
+    )
+    doc.add_line(f"- A huge 'Thank you!' to all sponsors across {_polar}, {_open_collective} and {_github_sponsors}!")
 
     return doc.text
 
