@@ -214,6 +214,8 @@ class _Thing:
         )
 
     async def create_draft_release(self, body: str, release_branch: str) -> str:
+        # mark alpha/beta/rc/dev versions as a GitHub pre-release (the API won't derive this)
+        is_prerelease = bool(re.search(r"(a|b|rc)\d+|\.dev\d+", self._new_release_version))
         res = await self._api_client.post(
             "/releases",
             json={
@@ -221,6 +223,7 @@ class _Thing:
                 "target_commitish": release_branch,
                 "name": self._new_release_tag,
                 "draft": True,
+                "prerelease": is_prerelease,
                 "body": body,
             },
         )
