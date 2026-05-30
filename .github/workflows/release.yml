@@ -109,6 +109,8 @@ jobs:
           git switch -c "$BRANCH"
           git commit -am "chore(release): prepare release v$VERSION"
           git push origin "$BRANCH"
-          gh pr create --base main --head "$BRANCH" \
+          # --repo pins the PR to the repo running the workflow (a fork would otherwise
+          # default to opening the PR against its upstream parent).
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
             --title "chore(release): v$VERSION" \
             --body "Automated release PR for v$VERSION. Review, merge, then **Publish** the draft release (→ \`publish.yml\` → PyPI)."
