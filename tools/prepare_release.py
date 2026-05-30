@@ -237,8 +237,10 @@ class GHReleaseWriter:
 
     def add_pr_descriptions(self, infos: list[PRInfo]) -> None:
         for info in infos:
-            # clean_title drops the conventional-commit prefix (e.g. "docs: ")
-            self.add_line(f"* {info.clean_title} by @{info.user.login} in {info.url}")
+            # clean_title drops the conventional-commit prefix (e.g. "docs: ");
+            # capitalize only the first char (not .capitalize(), which mangles acronyms like "OpenAPI")
+            title = info.clean_title[:1].upper() + info.clean_title[1:]
+            self.add_line(f"* {title} by @{info.user.login} in {info.url}")
 
 
 def build_gh_release_notes(release_info: ReleaseInfo) -> str:
