@@ -237,7 +237,8 @@ class GHReleaseWriter:
 
     def add_pr_descriptions(self, infos: list[PRInfo]) -> None:
         for info in infos:
-            self.add_line(f"* {info.title} by @{info.user.login} in {info.url}")
+            # clean_title drops the conventional-commit prefix (e.g. "docs: ")
+            self.add_line(f"* {info.clean_title} by @{info.user.login} in {info.url}")
 
 
 def build_gh_release_notes(release_info: ReleaseInfo) -> str:
