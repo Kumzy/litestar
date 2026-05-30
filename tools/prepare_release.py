@@ -18,11 +18,13 @@ _open_collective = "[OpenCollective](https://opencollective.com/litestar)"
 _github_sponsors = "[GitHub Sponsors](https://github.com/sponsors/litestar-org/)"
 
 # Read PR/tag/contributor data and build the note links from the canonical project
-# (override with RELEASE_SOURCE_REPO); create the release on the repo running the workflow
-# (a fork sets GITHUB_REPOSITORY) — so the data stays real while the actions land on the fork.
+# (override with RELEASE_SOURCE_REPO). Reads are always safe, so this may default.
 _SOURCE_REPO = os.getenv("RELEASE_SOURCE_REPO", "litestar-org/litestar")
-_TARGET_REPO = os.getenv("GITHUB_REPOSITORY", _SOURCE_REPO)
 _OWNER, _, _NAME = _SOURCE_REPO.partition("/")
+# The WRITE target (where the draft release is CREATED) has deliberately NO module-level
+# default: it is resolved per run in cli() from --target-repo / GITHUB_REPOSITORY, and a missing
+# value is a hard error. This is so a local run can NEVER silently create a release on
+# litestar-org just because GITHUB_REPOSITORY happened to be unset.
 
 
 class PullRequest(msgspec.Struct, kw_only=True):
@@ -87,12 +89,15 @@ def _pr_number_from_commit(comp: Comp) -> int:
 
 
 class _Thing:
-    def __init__(self, *, gh_token: str, base: str, release_branch: str, tag: str, version: str) -> None:
+    def __init__(
+        self, *, gh_token: str, base: str, release_branch: str, tag: str, version: str, target_repo: str | None = None
+    ) -> None:
         self._gh_token = gh_token
         self._base = base
         self._new_release_tag = tag
         self._release_branch = release_branch
         self._new_release_version = version
+        self._target_repo = target_repo  # where the draft release is created; None until resolved
         self._base_client = httpx.AsyncClient(
             headers={
                 "Authorization": f"Bearer {gh_token}",
@@ -221,11 +226,16 @@ class _Thing:
         )
 
     async def create_draft_release(self, body: str, release_branch: str) -> str:
+        if not self._target_repo:  # defence in depth; cli() already guards this
+            raise click.ClickException(
+                "No target repository resolved for the release — pass --target-repo OWNER/REPO "
+                "or set GITHUB_REPOSITORY."
+            )
         # mark alpha/beta/rc/dev versions as a GitHub pre-release (the API won't derive this)
         is_prerelease = bool(re.search(r"(a|b|rc)\d+|\.dev\d+", self._new_release_version))
-        # reads use the source base_url; the release is created on the target repo (the fork)
+        # reads use the source base_url; the release is created on the EXPLICIT target repo
         res = await self._api_client.post(
-            f"https://api.github.com/repos/{_TARGET_REPO}/releases",
+            f"https://api.github.com/repos/{self._target_repo}/releases",
             json={
                 "tag_name": self._new_release_tag,
                 "target_commitish": release_branch,
@@ -376,13 +386,30 @@ def _get_latest_tag(gh_token: str | None = None) -> str:
     "Alternatively, if the GitHub CLI is installed, it will be used to fetch a token",
 )
 @click.option("-c", "--create-draft-release", is_flag=True, help="Create draft release on GitHub")
+@click.option(
+    "--target-repo",
+    help="OWNER/REPO to create the draft release on. Defaults to GITHUB_REPOSITORY (set automatically "
+    "in CI). There is NO fallback default: --create-draft-release run locally without this (or "
+    "GITHUB_REPOSITORY) is a hard error, so you can never accidentally create a release on litestar-org.",
+)
 def cli(
     base: str | None,
     branch: str,
     version: str,
     gh_token: str | None,
     create_draft_release: bool,
+    target_repo: str | None,
 ) -> None:
+    # Resolve the WRITE target explicitly and fail fast; refuse to guess so a stray local run
+    # can't hit litestar-org. Done before any token/API work so an unsafe call errors instantly.
+    target_repo = target_repo or os.getenv("GITHUB_REPOSITORY")
+    if create_draft_release and not target_repo:
+        raise click.ClickException(
+            "Refusing to guess where to create the release. Pass --target-repo OWNER/REPO "
+            "(e.g. --target-repo Kumzy/litestar) or set GITHUB_REPOSITORY. "
+            "This guard exists so a local run never creates a draft release on litestar-org by accident."
+        )
+
     if gh_token is None:
         gh_token = _get_gh_token()
     if base is None:
@@ -396,14 +423,16 @@ def cli(
 
     click.secho(f"Creating release notes for tag {new_tag}, using {base} as a base", fg="cyan")
 
-    thing = _Thing(gh_token=gh_token, base=base, release_branch=branch, tag=new_tag, version=version)
+    thing = _Thing(
+        gh_token=gh_token, base=base, release_branch=branch, tag=new_tag, version=version, target_repo=target_repo
+    )
     loop = asyncio.new_event_loop()
 
     release_info = loop.run_until_complete(thing.get_release_info())
     gh_release_notes = build_gh_release_notes(release_info)
 
     if create_draft_release:
-        click.secho("Creating draft release", fg="blue")
+        click.secho(f"Creating draft release on {target_repo}", fg="blue")
         release_url = loop.run_until_complete(thing.create_draft_release(body=gh_release_notes, release_branch=branch))
         click.echo(f"Draft release available at: {release_url}")
     else:
