@@ -326,14 +326,16 @@ def _get_gh_token() -> str:
 
 def _get_latest_tag() -> str:
     click.secho("Using latest tag", fg="blue")
-    # The most recent tag reachable from HEAD (the release this branch descends from),
-    # falling back to the highest version tag. Avoids `--sort=taggerdate`, which wrongly
-    # orders litestar's many lightweight tags (no tagger date) and can return e.g. v2.9.1.
-    for cmd in ("git describe --tags --abbrev=0", "git tag --sort=-v:refname"):
-        out = subprocess.run(cmd, check=False, capture_output=True, text=True, shell=True).stdout.strip()  # noqa: S602
-        if out:
-            return out.splitlines()[0]
-    raise ValueError("no git tags found")
+    # The highest version tag = the latest release (e.g. v2.23.0). NOT `--sort=taggerdate`,
+    # which wrongly orders litestar's many lightweight tags (no tagger date) and can return
+    # e.g. v2.9.1; and NOT `git describe`, which only sees tags reachable from HEAD (the 3.0
+    # branch diverged at v2.17.0, so it would miss the later 2.x maintenance releases).
+    out = subprocess.run(  # noqa: S602
+        "git tag --sort=-v:refname", check=False, capture_output=True, text=True, shell=True
+    ).stdout.strip()
+    if not out:
+        raise ValueError("no git tags found")
+    return out.splitlines()[0]
 
 
 @click.command()
