@@ -1,0 +1,57 @@
+name: "Publish to TestPyPI"
+
+# Fork-only workflow for exercising the release/publish pipeline against TestPyPI
+# (https://test.pypi.org). Kept SEPARATE from publish.yml so the real-PyPI publish
+# can never be accidentally retargeted. Safe to keep on the fork; on upstream it has
+# no trusted publisher and would simply no-op/fail harmlessly.
+#
+# Auth (recommended): OIDC trusted publishing — no secret. On TestPyPI create a
+# "pending publisher": owner=Kumzy, repository=litestar,
+# workflow=publish-testpypi.yml, environment=testpypi.
+# (API-token alternative is shown in the commented step at the bottom.)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish-testpypi:
+    name: Upload release to TestPyPI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment: testpypi
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.8.8"
+          enable-cache: true
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to TestPyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+      # --- API-token alternative (instead of trusted publishing) ---
+      # Remove `permissions.id-token: write` and `environment: testpypi` above,
+      # add the secret TEST_PYPI_API_TOKEN to the fork, then use:
+      #
+      # - name: Publish to TestPyPI (token)
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     repository-url: https://test.pypi.org/legacy/
+      #     password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      #     skip-existing: true
