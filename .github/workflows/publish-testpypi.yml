@@ -2,13 +2,12 @@ name: "Publish to TestPyPI"
 
 # Fork-only workflow for exercising the release/publish pipeline against TestPyPI
 # (https://test.pypi.org). Kept SEPARATE from publish.yml so the real-PyPI publish
-# can never be accidentally retargeted. Safe to keep on the fork; on upstream it has
-# no trusted publisher and would simply no-op/fail harmlessly.
+# can never be accidentally retargeted. On upstream it has no token and no-ops.
 #
-# Auth (recommended): OIDC trusted publishing — no secret. On TestPyPI create a
-# "pending publisher": owner=Kumzy, repository=litestar,
-# workflow=publish-testpypi.yml, environment=testpypi.
-# (API-token alternative is shown in the commented step at the bottom.)
+# Auth: TestPyPI API token stored as the REPOSITORY secret TEST_PYPI_API_TOKEN.
+# (To switch to OIDC trusted publishing instead: add `permissions: id-token: write`
+#  and an `environment:` that matches the TestPyPI pending publisher, then drop the
+#  `password:` line below.)
 
 on:
   release:
@@ -19,9 +18,6 @@ jobs:
   publish-testpypi:
     name: Upload release to TestPyPI
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    environment: testpypi
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -39,19 +35,9 @@ jobs:
       - name: Build package
         run: uv build
 
-      - name: Publish to TestPyPI (trusted publishing)
+      - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           skip-existing: true
-
-      # --- API-token alternative (instead of trusted publishing) ---
-      # Remove `permissions.id-token: write` and `environment: testpypi` above,
-      # add the secret TEST_PYPI_API_TOKEN to the fork, then use:
-      #
-      # - name: Publish to TestPyPI (token)
-      #   uses: pypa/gh-action-pypi-publish@release/v1
-      #   with:
-      #     repository-url: https://test.pypi.org/legacy/
-      #     password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-      #     skip-existing: true
