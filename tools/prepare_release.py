@@ -249,17 +249,29 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
     #    made there depending on how things were merged
     doc = GHReleaseWriter()
 
+    # conventional-commit type -> release-notes section, in display order
+    sections = (
+        ("feat", "### New features 🚀"),
+        ("fix", "### Bugfixes 🐛"),
+        ("perf", "### Performance ⚡"),
+        ("refactor", "### Refactors 🔧"),
+        ("docs", "### Documentation 📚"),
+    )
+    titled_types = {cc_type for cc_type, _ in sections}
+    ignored_types = {"ci", "chore"}  # internal noise, kept out of the notes
+
     doc.add_line("## What's changed")
-    if features := release_info.pull_requests.get("feat"):
-        doc.add_line("\n### New features 🚀")
-        doc.add_pr_descriptions(features)
-    if fixes := release_info.pull_requests.get("fix"):
-        doc.add_line("\n### Bugfixes 🐛")
-        doc.add_pr_descriptions(fixes)
+    for cc_type, title in sections:
+        if prs := release_info.pull_requests.get(cc_type):
+            doc.add_line(f"\n{title}")
+            doc.add_pr_descriptions(prs)
 
-    ignore_sections = {"fix", "feat", "ci", "chore"}
-
-    if other := [pr for k, prs in release_info.pull_requests.items() if k not in ignore_sections for pr in prs]:
+    if other := [
+        pr
+        for cc_type, prs in release_info.pull_requests.items()
+        if cc_type not in titled_types and cc_type not in ignored_types
+        for pr in prs
+    ]:
         doc.add_line("\n<!-- Review these: Not all of them should go into the release notes -->")
         doc.add_line("### Other changes")
         doc.add_pr_descriptions(other)
