@@ -346,6 +346,15 @@ Creating a New Release
    This consumes the fragments in ``docs/release-notes/fragments/`` into a new
    ``.. changelog::`` entry. Review it in :doc:`/release-notes/changelog`.
 
+   Pre-releases (``aN`` / ``bN`` / ``rcN`` / ``devN``) each keep their own section. At a
+   **final** release, fold those pre-release sections into the final version's section:
+
+   .. code-block:: shell
+
+       python tools/consolidate_prereleases.py "$(uv version --short)"
+
+   ``make release-prepare`` and the *Release* workflow run this automatically for final releases.
+
 #. Generate the GitHub release notes and a draft release:
 
    .. code-block:: shell

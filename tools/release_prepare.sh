@@ -39,6 +39,13 @@ echo "→ preparing ${TAG} (bump: ${BUMP}) on a new branch — nothing will be p
 git switch -c "${TAG}"
 uv version --bump "${BUMP}" --no-sync
 uvx --from 'towncrier>=24,<26' towncrier build --yes --version "${NEW_VERSION}"
+
+# Pre-releases keep their own section; at a FINAL release, fold the pre-release
+# sections (aN/bN/rcN/.devN) of this version into a single consolidated section.
+if printf '%s' "${NEW_VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(\.post[0-9]+)?$'; then
+	python3 tools/consolidate_prereleases.py "${NEW_VERSION}"
+fi
+
 git commit -am "chore(release): prepare release ${TAG}"
 
 cat <<EOF

@@ -64,11 +64,22 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           uv version --bump "${{ inputs.bump }}" --no-sync
-          echo "VERSION=$(uv version --short)" >> "$GITHUB_ENV"
+          VERSION="$(uv version --short)"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          # final release => fold pre-release sections into one; pre-release => keep its own section
+          if printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(\.post[0-9]+)?$'; then
+            echo "IS_FINAL=true" >> "$GITHUB_ENV"
+          else
+            echo "IS_FINAL=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Assemble changelog from fragments
         if: ${{ !inputs.dry_run }}
         run: uvx --from 'towncrier>=24,<26' towncrier build --yes --version "$VERSION"
+
+      - name: Consolidate pre-release sections (final releases only)
+        if: ${{ !inputs.dry_run && env.IS_FINAL == 'true' }}
+        run: python tools/consolidate_prereleases.py "$VERSION"
 
       - name: Create draft GitHub release + notes
         if: ${{ !inputs.dry_run }}
