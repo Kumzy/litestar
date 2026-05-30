@@ -64,7 +64,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BUMP: ${{ inputs.bump }}
           EXPLICIT_VERSION: ${{ inputs.version }}
-        run: bash tools/release_preview.sh "${EXPLICIT_VERSION:-$BUMP}"
+          BASE: ${{ inputs.base }}
+        run: bash tools/release_preview.sh "${EXPLICIT_VERSION:-$BUMP}" "$BASE"
 
       # ------------------------------------------------------------ real release
       - name: Bump version
@@ -95,13 +96,8 @@ jobs:
         if: ${{ !inputs.dry_run && env.IS_FINAL == 'true' }}
         run: python tools/consolidate_prereleases.py "$VERSION"
 
-      - name: Create draft GitHub release + notes
-        if: ${{ !inputs.dry_run }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          uv run python tools/prepare_release.py "$VERSION" ${{ inputs.base && format('--base {0}', inputs.base) || '' }} --create-draft-release
-
+      # The GitHub draft release is created by finalize-release.yml once this PR is
+      # merged, so its notes reflect the final state of main.
       - name: Open release PR
         if: ${{ !inputs.dry_run }}
         env:
