@@ -38,6 +38,7 @@ class Sponsor:
     name: str
     url: str | None = None
     monthly_cents: int = 0
+    source: str = ""  # "GitHub Sponsors" | "OpenCollective" | "Polar" — used to group the notes
 
 
 async def _github(client: httpx.AsyncClient, token: str) -> tuple[list[Sponsor], int]:
@@ -83,7 +84,9 @@ async def _github(client: httpx.AsyncClient, token: str) -> tuple[list[Sponsor],
                 anonymous += 1
                 continue
             cents = (node.get("tier") or {}).get("monthlyPriceInCents") or 0
-            named.append(Sponsor(name=entity.get("name") or entity["login"], url=entity.get("url"), monthly_cents=cents))
+            named.append(
+                Sponsor(name=f"@{entity['login']}", url=entity.get("url"), monthly_cents=cents, source="GitHub Sponsors")
+            )
         if not conn["pageInfo"]["hasNextPage"]:
             return named, anonymous
         cursor = conn["pageInfo"]["endCursor"]
@@ -120,7 +123,7 @@ async def _opencollective(client: httpx.AsyncClient, token: str | None) -> tuple
                 continue
             if name.lower() in _OC_CONDUIT_ACCOUNTS:
                 continue  # cross-platform conduit, not an individual — counted via its own provider
-            named.append(Sponsor(name=name, url=f"https://opencollective.com/{account['slug']}"))
+            named.append(Sponsor(name=name, url=f"https://opencollective.com/{account['slug']}", source="OpenCollective"))
         offset += len(nodes)
         if not nodes or offset >= members["totalCount"]:
             return named, anonymous
@@ -146,7 +149,7 @@ async def _polar(client: httpx.AsyncClient, token: str) -> tuple[list[Sponsor], 
         for sub in items:
             name = (sub.get("customer") or {}).get("name")
             if name:
-                named.append(Sponsor(name=name, monthly_cents=sub.get("amount") or 0))
+                named.append(Sponsor(name=name, monthly_cents=sub.get("amount") or 0, source="Polar"))
             else:
                 anonymous += 1
         if not items or page >= (data.get("pagination") or {}).get("max_page", 1):
@@ -182,11 +185,11 @@ async def fetch_sponsors(*, gh_token: str | None = None) -> dict:
         named.extend(provider_named)
         anonymous += provider_anonymous
 
-    # dedup by case-insensitive name (someone sponsoring on two platforms), highest tier first
-    seen: set[str] = set()
+    # dedup within a platform (not across — the notes group by platform), highest tier first
+    seen: set[tuple[str, str]] = set()
     deduped: list[Sponsor] = []
     for sponsor in sorted(named, key=lambda s: (-s.monthly_cents, s.name.lower())):
-        key = sponsor.name.lower()
+        key = (sponsor.source, sponsor.name.lower())
         if key not in seen:
             seen.add(key)
             deduped.append(sponsor)

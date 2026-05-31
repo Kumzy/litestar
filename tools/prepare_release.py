@@ -329,8 +329,19 @@ def build_gh_release_notes(release_info: ReleaseInfo, sponsors: dict | None = No
     anonymous = (sponsors or {}).get("anonymous") or 0
     if named or anonymous:
         doc.add_line("Thanks to our incredible sponsors:")
+        by_source: dict[str, list] = {}
         for sponsor in named:
-            doc.add_line(f"- [{sponsor.name}]({sponsor.url})" if sponsor.url else f"- {sponsor.name}")
+            by_source.setdefault(sponsor.source, []).append(sponsor)
+        ordered = ["GitHub Sponsors", "OpenCollective", "Polar"]
+        ordered += [source for source in by_source if source not in ordered]
+        first = True
+        for source in ordered:
+            people = by_source.get(source)
+            if not people:
+                continue
+            line = f"{source}: " + ", ".join(person.name for person in people)
+            doc.add_line(f"\n{line}" if first else line)  # blank line before the first platform only
+            first = False
         if anonymous:
             doc.add_line(f"\n…and {anonymous} anonymous sponsor{'s' if anonymous != 1 else ''}. 💖")
     else:
