@@ -284,7 +284,8 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
     titled_types = {cc_type for cc_type, _ in sections}
     ignored_types = {"ci", "chore"}  # internal noise, kept out of the notes
 
-    doc.add_line("## What's changed")
+    doc.add_line("## Release Notes")
+    doc.add_line(f"\nReleased on {datetime.datetime.now(tz=datetime.UTC).date().isoformat()}.")
     for cc_type, title in sections:
         if prs := release_info.pull_requests.get(cc_type):
             doc.add_line(f"\n{title}")
@@ -309,10 +310,13 @@ def build_gh_release_notes(release_info: ReleaseInfo) -> str:
 
     doc.add_line("\n## Installation")
     doc.add_line(f"Install or upgrade to `{release_info.version}`:")
+    # uv and pip in separate code blocks (each gets its own GitHub copy button); labels outside.
+    doc.add_line("\n**uv**")
     doc.add_line("```shell")
-    doc.add_line("# uv")
     doc.add_line(f'uv add "litestar=={release_info.version}"')
-    doc.add_line("# pip")
+    doc.add_line("```")
+    doc.add_line("\n**pip**")
+    doc.add_line("```shell")
     doc.add_line(f'pip install --upgrade "litestar=={release_info.version}"')
     doc.add_line("```")
 
