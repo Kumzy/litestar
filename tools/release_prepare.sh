@@ -56,10 +56,11 @@ cat <<EOF
 
 Next:
   git push origin ${TAG}
-  gh pr create --base main --title "chore(release): ${TAG}"
-  # after the PR is merged:
-  python tools/prepare_release.py ${NEW_VERSION} --create-draft-release
-  # then click "Publish" on the draft release  ->  publish.yml  ->  PyPI
+  # --body "" keeps the PR description blank (without it, gh pre-fills from your local git log).
+  gh pr create --base main --head ${TAG} --title "chore(release): ${TAG}" --body ""
+  # merging the PR triggers finalize-release.yml, which creates the draft GitHub release.
+  # (to create it manually instead: python tools/prepare_release.py ${NEW_VERSION} --create-draft-release --target-repo <owner/repo>)
+  # then review and click "Publish" on the draft release  ->  publish.yml  ->  PyPI
 
 (Or skip all of the above and just run the "Release" workflow with dry_run off.)
 EOF
