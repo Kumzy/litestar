@@ -339,8 +339,8 @@ def build_gh_release_notes(release_info: ReleaseInfo, sponsors: dict | None = No
             people = by_source.get(source)
             if not people:
                 continue
-            line = f"{source}: " + ", ".join(person.name for person in people)
-            doc.add_line(f"\n{line}" if first else line)  # blank line before the first platform only
+            line = f"- **{source}**: " + ", ".join(person.name for person in people)
+            doc.add_line(f"\n{line}" if first else line)  # blank line before the first list item only
             first = False
         if anonymous:
             doc.add_line(f"\n…and {anonymous} anonymous sponsor{'s' if anonymous != 1 else ''}. 💖")
