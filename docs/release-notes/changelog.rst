@@ -6,7 +6,8 @@
 .. towncrier release notes start
 
 .. changelog:: 3.0.0b1
-    :date: 2026-05-30
+    :date: 2026-05-31
+    
 .. changelog:: 3.0.0
     :date: 2364-01-27
 

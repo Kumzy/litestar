@@ -44,6 +44,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          # Optional sponsor-provider tokens for the release notes (empty -> that provider is skipped).
+          # OpenCollective works without a token; Polar needs this OAT. GitHub Sponsors additionally
+          # needs a PAT with read:user+read:org (the default GITHUB_TOKEN can't read sponsorships) —
+          # point GH_TOKEN at such a PAT to enable it.
+          OPENCOLLECTIVE_TOKEN: ${{ secrets.OPENCOLLECTIVE_TOKEN }}
+          POLAR_TOKEN: ${{ secrets.POLAR_TOKEN }}
         run: |
           # only act on real vX.Y.Z release branches
           if ! printf '%s' "$HEAD_REF" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
